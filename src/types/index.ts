@@ -6,7 +6,7 @@ export interface Message {
 }
 
 export interface DrawCommand {
-  type: 'circle' | 'rectangle' | 'diamond' | 'hexagon' | 'ellipse' | 'star' | 'arrow' | 'text' | 'line' | 'freehand';
+  type: 'circle' | 'rectangle' | 'arrow' | 'text' | 'line' | 'freehand';
   x: number;
   y: number;
   props?: {

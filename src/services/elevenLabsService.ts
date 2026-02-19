@@ -1,5 +1,5 @@
 // ElevenLabs TTS Service - High quality AI voices
-// Uses Audio element for better browser compatibility
+// Uses streaming for faster response
 
 const ELEVENLABS_API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY || '';
 
@@ -17,32 +17,22 @@ const VOICES = {
 const DEFAULT_VOICE_ID = VOICES.rachel;
 
 class ElevenLabsService {
-  private currentAudio: HTMLAudioElement | null = null;
+  private audioContext: AudioContext | null = null;
+  private currentSource: AudioBufferSourceNode | null = null;
   private isPlaying = false;
 
   constructor() {
-    // Log configuration status on load
-    console.log('🔊 ElevenLabs TTS configured:', !!ELEVENLABS_API_KEY);
-    if (ELEVENLABS_API_KEY) {
-      console.log('🔊 ElevenLabs API key found (length:', ELEVENLABS_API_KEY.length, ')');
+    // Initialize audio context on first user interaction
+    if (typeof window !== 'undefined') {
+      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
   }
 
   async speak(text: string, onEnd?: () => void): Promise<void> {
-    if (!text || text.trim().length === 0) {
-      onEnd?.();
-      return;
+    if (!ELEVENLABS_API_KEY) {
+      console.warn('ElevenLabs API key not configured, falling back to Web Speech');
+      return this.fallbackSpeak(text, onEnd);
     }
-
-    // Truncate very long text (ElevenLabs has limits)
-    const truncatedText = text.length > 1000 ? text.substring(0, 1000) + '...' : text;
-
-    if (!ELEVENLABS_API_KEY || ELEVENLABS_API_KEY.length < 10) {
-      console.warn('🔇 ElevenLabs API key not configured, using Web Speech');
-      return this.fallbackSpeak(truncatedText, onEnd);
-    }
-
-    console.log('🔊 ElevenLabs: Speaking:', truncatedText.substring(0, 50) + '...');
 
     try {
       this.stop(); // Stop any current playback
@@ -57,7 +47,7 @@ class ElevenLabsService {
             'xi-api-key': ELEVENLABS_API_KEY,
           },
           body: JSON.stringify({
-            text: truncatedText,
+            text: text,
             model_id: 'eleven_monolingual_v1',
             voice_settings: {
               stability: 0.5,
@@ -70,114 +60,92 @@ class ElevenLabsService {
       );
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ ElevenLabs API error:', response.status, errorText);
-        return this.fallbackSpeak(truncatedText, onEnd);
+        console.error('ElevenLabs API error:', response.status);
+        return this.fallbackSpeak(text, onEnd);
       }
 
-      console.log('✅ ElevenLabs: Audio received, playing...');
-      const audioBlob = await response.blob();
-      await this.playAudioBlob(audioBlob, onEnd);
+      const audioData = await response.arrayBuffer();
+      await this.playAudio(audioData, onEnd);
     } catch (error) {
-      console.error('❌ ElevenLabs error:', error);
-      return this.fallbackSpeak(truncatedText, onEnd);
+      console.error('ElevenLabs error:', error);
+      return this.fallbackSpeak(text, onEnd);
     }
   }
 
-  private async playAudioBlob(blob: Blob, onEnd?: () => void): Promise<void> {
-    return new Promise((resolve) => {
-      // Create audio element - more reliable than AudioContext
-      this.currentAudio = new Audio();
-      const audioUrl = URL.createObjectURL(blob);
+  private async playAudio(audioData: ArrayBuffer, onEnd?: () => void): Promise<void> {
+    if (!this.audioContext) {
+      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+
+    // Resume context if suspended
+    if (this.audioContext.state === 'suspended') {
+      await this.audioContext.resume();
+    }
+
+    try {
+      const audioBuffer = await this.audioContext.decodeAudioData(audioData);
       
-      this.currentAudio.src = audioUrl;
+      this.currentSource = this.audioContext.createBufferSource();
+      this.currentSource.buffer = audioBuffer;
+      this.currentSource.connect(this.audioContext.destination);
+      
       this.isPlaying = true;
       
-      this.currentAudio.onended = () => {
+      this.currentSource.onended = () => {
         this.isPlaying = false;
-        URL.revokeObjectURL(audioUrl);
-        this.currentAudio = null;
+        this.currentSource = null;
         onEnd?.();
-        resolve();
       };
 
-      this.currentAudio.onerror = (e) => {
-        console.error('❌ Audio playback error:', e);
-        this.isPlaying = false;
-        URL.revokeObjectURL(audioUrl);
-        this.currentAudio = null;
-        // Fall back to Web Speech
-        this.fallbackSpeak(blob.toString(), onEnd).then(resolve);
-      };
-
-      this.currentAudio.play().catch((e) => {
-        console.error('❌ Audio play() failed:', e);
-        this.fallbackSpeak('', onEnd).then(resolve);
-      });
-    });
+      this.currentSource.start(0);
+    } catch (error) {
+      console.error('Audio playback error:', error);
+      this.isPlaying = false;
+      onEnd?.();
+    }
   }
 
   // Fallback to Web Speech API
   private fallbackSpeak(text: string, onEnd?: () => void): Promise<void> {
     return new Promise((resolve) => {
-      console.log('🔈 Using Web Speech API fallback');
       const synthesis = window.speechSynthesis;
       synthesis.cancel();
-
-      if (!text || text.trim().length === 0) {
-        onEnd?.();
-        resolve();
-        return;
-      }
 
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 1.0;
       utterance.pitch = 1.0;
       utterance.volume = 1.0;
 
-      // Try to get a good English voice
-      const loadVoices = () => {
-        const voices = synthesis.getVoices();
-        const preferredVoice = voices.find(v => 
-          v.name.includes('Google') || 
-          v.name.includes('Microsoft') || 
-          v.name.includes('Natural') || 
-          (v.lang.startsWith('en') && v.localService)
-        ) || voices.find(v => v.lang.startsWith('en'));
-        
-        if (preferredVoice) {
-          utterance.voice = preferredVoice;
-        }
-        
-        utterance.onend = () => {
-          onEnd?.();
-          resolve();
-        };
+      const voices = synthesis.getVoices();
+      const preferredVoice = voices.find(v => 
+        v.name.includes('Google') || v.name.includes('Natural') || v.lang.startsWith('en')
+      );
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+      }
 
-        utterance.onerror = () => {
-          onEnd?.();
-          resolve();
-        };
-
-        synthesis.speak(utterance);
+      utterance.onend = () => {
+        onEnd?.();
+        resolve();
       };
 
-      // Voices may not be loaded yet
-      if (synthesis.getVoices().length > 0) {
-        loadVoices();
-      } else {
-        synthesis.onvoiceschanged = loadVoices;
-        // Fallback timeout
-        setTimeout(loadVoices, 100);
-      }
+      utterance.onerror = () => {
+        onEnd?.();
+        resolve();
+      };
+
+      synthesis.speak(utterance);
     });
   }
 
   stop(): void {
-    if (this.currentAudio) {
-      this.currentAudio.pause();
-      this.currentAudio.currentTime = 0;
-      this.currentAudio = null;
+    if (this.currentSource) {
+      try {
+        this.currentSource.stop();
+      } catch (e) {
+        // Ignore if already stopped
+      }
+      this.currentSource = null;
     }
     this.isPlaying = false;
     
@@ -186,11 +154,11 @@ class ElevenLabsService {
   }
 
   isSpeaking(): boolean {
-    return this.isPlaying || (this.currentAudio?.paused === false) || window.speechSynthesis?.speaking;
+    return this.isPlaying || window.speechSynthesis?.speaking;
   }
 
   isConfigured(): boolean {
-    return !!ELEVENLABS_API_KEY && ELEVENLABS_API_KEY.length > 10;
+    return !!ELEVENLABS_API_KEY;
   }
 }
 

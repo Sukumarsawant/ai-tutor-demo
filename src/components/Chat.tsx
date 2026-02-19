@@ -118,7 +118,7 @@ export function Chat({ tutorState, setTutorState }: ChatProps) {
 
         setTutorState({ isProcessing: false, isSpeaking: true, isListening: false });
 
-        // Execute with sync controller
+        // Execute with improved sync
         await stepSyncController.executeAIResponse(
           response.narration,
           response.drawCommands,

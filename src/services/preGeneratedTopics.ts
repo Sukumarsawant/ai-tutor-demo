@@ -256,152 +256,21 @@ O(n squared) Quadratic: Slow for large input. Nested loops.`,
         ]
       }
     ]
-  },
-
-  // ============ SPACE COMPLEXITY ============
-  {
-    keywords: ['space', 'complexity', 'memory', 'allocation', 'ram', 'storage', 'big o space'],
-    topic: 'space-complexity',
-    taskBreakdown: [
-      'Step 1: What is Space Complexity',
-      'Step 2: O(1) Constant Space',
-      'Step 3: O(n) Linear Space',
-      'Step 4: O(n²) Quadratic Space'
-    ],
-    explanation: `Space Complexity - Memory Usage
-
-Space complexity measures how much memory an algorithm uses.
-
-O(1) Constant: Fixed memory, no matter input size. Using a few variables.
-
-O(n) Linear: Memory grows with input. Storing a copy of an array.
-
-O(n²) Quadratic: Memory grows rapidly. 2D arrays, matrices.
-
-Trade-off: Often we trade time for space or vice versa.`,
-    steps: [
-      {
-        narration: "Space complexity measures how much memory an algorithm uses as input grows.",
-        drawCommands: [
-          { type: 'text', x: 200, y: 25, props: { text: 'SPACE COMPLEXITY - MEMORY', color: 'black' } }
-        ]
-      },
-      {
-        narration: "Just like time complexity, we use Big O notation for memory usage.",
-        drawCommands: [
-          { type: 'arrow', x: 0, y: 0, props: { start: { x: 80, y: 400 }, end: { x: 80, y: 80 }, color: 'black' } },
-          { type: 'arrow', x: 0, y: 0, props: { start: { x: 80, y: 400 }, end: { x: 500, y: 400 }, color: 'black' } },
-          { type: 'text', x: 30, y: 70, props: { text: 'Memory', color: 'black' } },
-          { type: 'text', x: 460, y: 420, props: { text: 'Input n', color: 'black' } }
-        ]
-      },
-      {
-        narration: "O of 1 is constant space. Uses fixed memory. Like using just a few variables.",
-        drawCommands: [
-          { type: 'line', x: 0, y: 0, props: { start: { x: 80, y: 370 }, end: { x: 450, y: 370 }, color: 'green' } },
-          { type: 'text', x: 460, y: 370, props: { text: 'O(1)', color: 'green' } },
-          { type: 'rectangle', x: 530, y: 350, props: { w: 60, h: 40, color: 'green' } },
-          { type: 'text', x: 535, y: 400, props: { text: 'int x=5', color: 'green' } }
-        ]
-      },
-      {
-        narration: "O of n uses memory proportional to input. Like creating a copy of an array.",
-        drawCommands: [
-          { type: 'line', x: 0, y: 0, props: { start: { x: 80, y: 370 }, end: { x: 350, y: 180 }, color: 'orange' } },
-          { type: 'text', x: 360, y: 180, props: { text: 'O(n)', color: 'orange' } },
-          { type: 'rectangle', x: 530, y: 240, props: { w: 80, h: 30, color: 'orange' } },
-          { type: 'text', x: 535, y: 280, props: { text: 'array[n]', color: 'orange' } }
-        ]
-      },
-      {
-        narration: "O of n squared uses quadratic space. Like a 2D matrix or grid.",
-        drawCommands: [
-          { type: 'circle', x: 100, y: 360, props: { radius: 4, color: 'red' } },
-          { type: 'circle', x: 140, y: 300, props: { radius: 4, color: 'red' } },
-          { type: 'circle', x: 180, y: 200, props: { radius: 4, color: 'red' } },
-          { type: 'circle', x: 220, y: 90, props: { radius: 4, color: 'red' } },
-          { type: 'text', x: 230, y: 80, props: { text: 'O(n²)', color: 'red' } },
-          { type: 'rectangle', x: 530, y: 120, props: { w: 50, h: 50, color: 'red' } },
-          { type: 'text', x: 525, y: 180, props: { text: 'matrix[n][n]', color: 'red' } }
-        ]
-      },
-      {
-        narration: "Examples: HashMap uses O n space. Recursive calls use stack space.",
-        drawCommands: [
-          { type: 'text', x: 80, y: 450, props: { text: 'HashMap → O(n)', color: 'blue' } },
-          { type: 'text', x: 250, y: 450, props: { text: 'Recursion → O(depth)', color: 'violet' } },
-          { type: 'text', x: 450, y: 450, props: { text: 'In-place → O(1)', color: 'green' } }
-        ]
-      },
-      {
-        narration: "Remember: Often we trade time for space. Caching uses more memory but is faster.",
-        drawCommands: [
-          { type: 'rectangle', x: 80, y: 480, props: { w: 150, h: 40, color: 'blue' } },
-          { type: 'text', x: 100, y: 495, props: { text: 'More Space', color: 'blue' } },
-          { type: 'arrow', x: 0, y: 0, props: { start: { x: 240, y: 500 }, end: { x: 300, y: 500 }, color: 'black' } },
-          { type: 'rectangle', x: 310, y: 480, props: { w: 150, h: 40, color: 'green' } },
-          { type: 'text', x: 330, y: 495, props: { text: 'Less Time', color: 'green' } }
-        ]
-      }
-    ]
   }
 ];
 
-// Semantic keywords for better matching
-const SEMANTIC_SYNONYMS: Record<string, string[]> = {
-  'newton': ['physics', 'mechanics', 'movement', 'f=ma', 'action reaction'],
-  'motion': ['movement', 'moving', 'velocity', 'speed', 'acceleration'],
-  'force': ['push', 'pull', 'f=ma', 'newton'],
-  'computer': ['pc', 'laptop', 'machine', 'hardware', 'software', 'processor'],
-  'cpu': ['processor', 'chip', 'brain', 'computing'],
-  'memory': ['ram', 'storage', 'cache', 'hard drive', 'ssd'],
-  'time': ['runtime', 'speed', 'performance', 'efficient'],
-  'complexity': ['big o', 'o(n)', 'o(1)', 'efficiency', 'performance', 'algorithm'],
-  'algorithm': ['sorting', 'searching', 'code', 'program', 'data structure'],
-  'space': ['memory', 'storage', 'ram', 'allocation'],
-};
-
-// Find a pre-generated topic by semantic matching
+// Find a pre-generated topic by matching keywords in the query
 export function findPreGeneratedTopic(query: string): PreGeneratedTopic | null {
   const lowerQuery = query.toLowerCase();
   
-  // Expand query with synonyms
-  let expandedTerms = lowerQuery.split(/\s+/);
-  for (const term of expandedTerms) {
-    for (const [key, synonyms] of Object.entries(SEMANTIC_SYNONYMS)) {
-      if (term.includes(key) || synonyms.some(s => term.includes(s))) {
-        expandedTerms.push(key, ...synonyms);
-      }
-    }
-  }
-  
-  let bestMatch: PreGeneratedTopic | null = null;
-  let bestScore = 0;
-  
   for (const topic of preGeneratedTopics) {
-    // Count keyword matches including expanded terms
-    let score = 0;
-    for (const keyword of topic.keywords) {
-      if (lowerQuery.includes(keyword)) {
-        score += 3; // Direct match scores higher
-      } else if (expandedTerms.some(t => t.includes(keyword) || keyword.includes(t))) {
-        score += 1; // Semantic match
-      }
-    }
-    
-    // Also check if query appears in topic name
-    if (lowerQuery.includes(topic.topic.replace('-', ' '))) {
-      score += 2;
-    }
-    
-    if (score > bestScore) {
-      bestScore = score;
-      bestMatch = topic;
+    const matchCount = topic.keywords.filter(keyword => lowerQuery.includes(keyword)).length;
+    if (matchCount >= 2 || (matchCount === 1 && lowerQuery.length < 50)) {
+      return topic;
     }
   }
   
-  // Return match if score is high enough (at least 2 points)
-  return bestScore >= 2 ? bestMatch : null;
+  return null;
 }
 
 // Get all quick prompt suggestions
@@ -409,7 +278,6 @@ export function getQuickPrompts(): { label: string; query: string }[] {
   return [
     { label: "Newton's Laws", query: "Explain Newton's laws of motion" },
     { label: "Computer System", query: "Explain how a computer system works" },
-    { label: "Time Complexity", query: "Explain time complexity and Big O notation" },
-    { label: "Space Complexity", query: "Explain space complexity and memory usage" }
+    { label: "Time Complexity", query: "Explain time complexity and Big O notation" }
   ];
 }

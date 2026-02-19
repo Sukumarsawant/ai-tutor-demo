@@ -35,38 +35,21 @@ export class DrawingController {
 
   // Clear all shapes created by the AI
   clearAIDrawings() {
-    if (!this.editor) {
-      console.warn('DrawingController: No editor set');
-      return;
-    }
+    if (!this.editor) return;
     
     if (this.createdShapeIds.length > 0) {
-      try {
-        this.editor.deleteShapes(this.createdShapeIds);
-      } catch (e) {
-        console.error('Error clearing AI drawings:', e);
-      }
+      this.editor.deleteShapes(this.createdShapeIds);
       this.createdShapeIds = [];
     }
   }
 
   // Clear entire canvas
   clearCanvas() {
-    if (!this.editor) {
-      console.warn('DrawingController: No editor set, cannot clear canvas');
-      return;
-    }
+    if (!this.editor) return;
     
-    try {
-      const allShapeIds = Array.from(this.editor.getCurrentPageShapeIds());
-      console.log('Clearing canvas, shapes:', allShapeIds.length);
-      if (allShapeIds.length > 0) {
-        this.editor.deleteShapes(allShapeIds);
-      }
-      this.createdShapeIds = [];
-    } catch (e) {
-      console.error('Error clearing canvas:', e);
-    }
+    const allShapeIds = this.editor.getCurrentPageShapeIds();
+    this.editor.deleteShapes([...allShapeIds]);
+    this.createdShapeIds = [];
   }
 
   // Execute a sequence of draw commands with delays for animation effect
@@ -92,18 +75,6 @@ export class DrawingController {
           break;
         case 'rectangle':
           this.drawRectangle(shapeId, command);
-          break;
-        case 'diamond':
-          this.drawDiamond(shapeId, command);
-          break;
-        case 'hexagon':
-          this.drawHexagon(shapeId, command);
-          break;
-        case 'ellipse':
-          this.drawEllipse(shapeId, command);
-          break;
-        case 'star':
-          this.drawStar(shapeId, command);
           break;
         case 'arrow':
           this.drawArrow(shapeId, command);
@@ -162,94 +133,6 @@ export class DrawingController {
       y: command.y,
       props: {
         geo: 'rectangle',
-        w: width,
-        h: height,
-        color: getColor(color),
-        fill: 'solid',
-      },
-    });
-  }
-
-  private drawDiamond(id: TLShapeId, command: DrawCommand) {
-    if (!this.editor) return;
-
-    const width = command.props?.w || 80;
-    const height = command.props?.h || 80;
-    const color = command.props?.color || 'orange';
-
-    this.editor.createShape({
-      id,
-      type: 'geo',
-      x: command.x - width / 2,
-      y: command.y - height / 2,
-      props: {
-        geo: 'diamond',
-        w: width,
-        h: height,
-        color: getColor(color),
-        fill: 'solid',
-      },
-    });
-  }
-
-  private drawHexagon(id: TLShapeId, command: DrawCommand) {
-    if (!this.editor) return;
-
-    const width = command.props?.w || 90;
-    const height = command.props?.h || 80;
-    const color = command.props?.color || 'violet';
-
-    this.editor.createShape({
-      id,
-      type: 'geo',
-      x: command.x - width / 2,
-      y: command.y - height / 2,
-      props: {
-        geo: 'hexagon',
-        w: width,
-        h: height,
-        color: getColor(color),
-        fill: 'solid',
-      },
-    });
-  }
-
-  private drawEllipse(id: TLShapeId, command: DrawCommand) {
-    if (!this.editor) return;
-
-    const width = command.props?.w || 120;
-    const height = command.props?.h || 70;
-    const color = command.props?.color || 'green';
-
-    this.editor.createShape({
-      id,
-      type: 'geo',
-      x: command.x - width / 2,
-      y: command.y - height / 2,
-      props: {
-        geo: 'ellipse',
-        w: width,
-        h: height,
-        color: getColor(color),
-        fill: 'solid',
-      },
-    });
-  }
-
-  private drawStar(id: TLShapeId, command: DrawCommand) {
-    if (!this.editor) return;
-
-    const width = command.props?.w || 80;
-    const height = command.props?.h || 80;
-    const color = command.props?.color || 'yellow';
-
-    this.editor.createShape({
-      id,
-      type: 'geo',
-      x: command.x - width / 2,
-      y: command.y - height / 2,
-      props: {
-        geo: 'star',
         w: width,
         h: height,
         color: getColor(color),

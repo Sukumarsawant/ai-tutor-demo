@@ -5,39 +5,10 @@ import { elevenLabsService } from './elevenLabsService';
 import { drawingController } from './drawingController';
 import type { TeachingStep } from './preGeneratedTopics';
 import type { DrawCommand } from '../types';
-import type { StreamingPart } from './streamingAIService';
 
 class StepSyncController {
   private isRunning = false;
   private shouldStop = false;
-
-  // Execute streaming parts with synchronized speech and drawing
-  async executeStreamingParts(
-    parts: StreamingPart[],
-    onPartStart?: (partIndex: number, totalParts: number, narration: string) => void,
-    onComplete?: () => void
-  ): Promise<void> {
-    this.isRunning = true;
-    this.shouldStop = false;
-
-    for (let i = 0; i < parts.length; i++) {
-      if (this.shouldStop) break;
-
-      const part = parts[i];
-      onPartStart?.(i, parts.length, part.narration);
-
-      // Execute speech and drawing in parallel, wait for both
-      await this.executeStepSync(part.narration, part.drawCommands);
-      
-      // Small pause between parts
-      if (!this.shouldStop && i < parts.length - 1) {
-        await this.delay(300);
-      }
-    }
-
-    this.isRunning = false;
-    onComplete?.();
-  }
 
   // Execute steps with synchronized speech and drawing
   async executeSteps(
