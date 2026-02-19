@@ -29,6 +29,8 @@ class ElevenLabsService {
   }
 
   async speak(text: string, onEnd?: () => void): Promise<void> {
+    console.log('ElevenLabs speak called, API key exists:', !!ELEVENLABS_API_KEY, 'key length:', ELEVENLABS_API_KEY.length);
+    
     if (!ELEVENLABS_API_KEY) {
       console.warn('ElevenLabs API key not configured, falling back to Web Speech');
       return this.fallbackSpeak(text, onEnd);
@@ -36,6 +38,7 @@ class ElevenLabsService {
 
     try {
       this.stop(); // Stop any current playback
+      console.log('Making ElevenLabs API request...');
       
       const response = await fetch(
         `https://api.elevenlabs.io/v1/text-to-speech/${DEFAULT_VOICE_ID}`,

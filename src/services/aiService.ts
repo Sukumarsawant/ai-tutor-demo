@@ -17,7 +17,7 @@ const groq = new Groq({
 // Track current topic for smart context
 let currentTopic: string | null = null;
 
-const SYSTEM_PROMPT = `You are Feynman, an expert AI tutor. Explain concepts with visual diagrams.
+const SYSTEM_PROMPT = `You are an expert AI tutor. Explain concepts with visual diagrams.
 
 RESPOND WITH ONLY A JSON OBJECT (no markdown):
 
@@ -141,7 +141,7 @@ function parseAIResponse(responseText: string): AIResponse & { isNewTopic?: bool
 }
 
 // Mermaid diagram generation prompt
-const MERMAID_SYSTEM_PROMPT = `You are Feynman, an expert AI tutor. Generate clear Mermaid diagrams.
+const MERMAID_SYSTEM_PROMPT = `You are an expert AI tutor. Generate clear Mermaid diagrams.
 
 RESPOND WITH ONLY A JSON OBJECT (no markdown):
 

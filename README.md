@@ -1,6 +1,6 @@
-#  Feynman AI - Interactive AI Tutor
+# AI Tutor - Interactive Learning Assistant
 
-An interactive real-time AI tutor that explains concepts through visual drawings and clear explanations, inspired by Richard Feynman's teaching style.
+An interactive real-time AI tutor that explains concepts through visual drawings and clear explanations.
 
 ##  Features
 

@@ -1,7 +1,7 @@
 // Step Sync Controller - coordinates speech with drawing step by step
 // This ensures narration and drawing happen together without lag
 
-import { speechService } from './speechService';
+import { elevenLabsService } from './elevenLabsService';
 import { drawingController } from './drawingController';
 import type { TeachingStep } from './preGeneratedTopics';
 import type { DrawCommand } from '../types';
@@ -56,7 +56,7 @@ class StepSyncController {
     // Start speech with slight delay so drawing begins first
     await this.delay(200);
     const speechPromise = narration 
-      ? speechService.speak(narration) 
+      ? elevenLabsService.speak(narration) 
       : Promise.resolve();
 
     // Wait for both to complete
@@ -92,7 +92,7 @@ class StepSyncController {
       // No drawing, just speak
       if (narration) {
         onSpeechStart?.();
-        await speechService.speak(narration);
+        await elevenLabsService.speak(narration);
       }
     } else {
       // Group commands into chunks for better sync
@@ -146,7 +146,7 @@ class StepSyncController {
   // Stop execution
   stop(): void {
     this.shouldStop = true;
-    speechService.stopSpeaking();
+    elevenLabsService.stop();
     this.isRunning = false;
   }
 

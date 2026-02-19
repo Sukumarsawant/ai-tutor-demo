@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { Message, TutorState } from '../types';
 import { getAIResponse, getMermaidResponse, isAPIKeyConfigured, resetTopicContext } from '../services/aiService';
 import { speechService } from '../services/speechService';
+import { elevenLabsService } from '../services/elevenLabsService';
 import { drawingController } from '../services/drawingController';
 import { stepSyncController } from '../services/stepSyncController';
 import { findPreGeneratedTopic, getQuickPrompts } from '../services/preGeneratedTopics';
@@ -80,9 +81,9 @@ export function Chat({ tutorState, setTutorState, viewMode, onDiagramGenerated }
         // Send diagram to parent - whole diagram at once
         onDiagramGenerated(response.mermaidCode);
 
-        // Speak the explanation
+        // Speak the explanation with ElevenLabs
         setTutorState({ isProcessing: false, isSpeaking: true, isListening: false });
-        await speechService.speak(response.explanation, () => {
+        await elevenLabsService.speak(response.explanation, () => {
           setTutorState(prev => ({ ...prev, isSpeaking: false }));
         });
       }
@@ -200,7 +201,7 @@ export function Chat({ tutorState, setTutorState, viewMode, onDiagramGenerated }
 
   const handleStop = () => {
     stepSyncController.stop();
-    speechService.stopSpeaking();
+    elevenLabsService.stop();
     speechService.stopListening();
     setTutorState({ isProcessing: false, isSpeaking: false, isListening: false });
     setCurrentStep(-1);
