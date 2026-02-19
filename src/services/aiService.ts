@@ -140,6 +140,210 @@ function parseAIResponse(responseText: string): AIResponse & { isNewTopic?: bool
   }
 }
 
+// Mermaid diagram generation prompt
+const MERMAID_SYSTEM_PROMPT = `You are Feynman, an expert AI tutor. Generate clear Mermaid diagrams.
+
+RESPOND WITH ONLY A JSON OBJECT (no markdown):
+
+{
+  "topic": "topic name",
+  "isNewTopic": true or false,
+  "explanation": "Detailed text explanation",
+  "mermaidCode": "graph TD\\n    A[Start] --> B[End]"
+}
+
+CRITICAL MERMAID SYNTAX RULES (MUST FOLLOW):
+
+1. ALWAYS quote node text with special characters:
+   - BAD: A[O(n^2)] - WILL ERROR
+   - GOOD: A["O(n²)"] - Works!
+   - BAD: B[O(2^n)]  
+   - GOOD: B["O(2ⁿ)"]
+   - Use Unicode superscripts: ² ³ ⁿ instead of ^
+
+2. NEVER use these characters unquoted: ^ ( ) < > { } | # &
+   - Always wrap in double quotes: A["text with (parens)"]
+
+3. SIMPLE NODE IDs:
+   - Use short IDs: A, B, C, N1, N2
+   - Text goes in brackets: A["Complex Text Here"]
+
+4. FLOWCHART FORMAT:
+   graph TD
+       A["First Node"] --> B["Second Node"]
+       B --> C["Third Node"]
+
+5. SUBGRAPHS (for grouping):
+   graph TD
+       subgraph Group1["Input Layer"]
+           A["Node A"]
+           B["Node B"]
+       end
+       subgraph Group2["Output Layer"]
+           C["Node C"]
+       end
+       A --> C
+       B --> C
+
+6. NO INVISIBLE EDGES (~~~) - they cause errors. Use regular arrows or omit.
+
+7. KEEP IT SIMPLE:
+   - Max 10-12 nodes
+   - Short text labels (2-4 words)
+   - Use --> for all connections
+
+EXAMPLE - Time Complexity:
+graph TD
+    A["Time Complexity"] --> B["Big O Notation"]
+    B --> C["O(1) Constant"]
+    B --> D["O(n) Linear"]
+    B --> E["O(n²) Quadratic"]
+    B --> F["O(log n) Logarithmic"]
+
+EXAMPLE - Computer System:
+graph TD
+    subgraph Hardware
+        A["CPU"] --> B["RAM"]
+        B --> C["Storage"]
+    end
+    subgraph Software
+        D["OS"] --> E["Apps"]
+    end
+    A --> D`;
+
+export interface MermaidResponse {
+  topic: string;
+  isNewTopic: boolean;
+  explanation: string;
+  mermaidCode: string;
+}
+
+export async function getMermaidResponse(
+  userMessage: string,
+  conversationHistory: { role: 'user' | 'assistant'; content: string }[]
+): Promise<MermaidResponse> {
+  const contextMessage = currentTopic 
+    ? `Continue explaining "${currentTopic}". Set isNewTopic:false.`
+    : 'New topic. Set isNewTopic:true.';
+
+  const messages = [
+    { role: 'system' as const, content: MERMAID_SYSTEM_PROMPT },
+    { role: 'system' as const, content: contextMessage },
+    ...conversationHistory.slice(-4).map(m => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content
+    })),
+    { role: 'user' as const, content: userMessage }
+  ];
+
+  // Try OpenAI first
+  try {
+    console.log('Trying OpenAI for Mermaid...');
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages,
+      temperature: 0.7,
+      max_tokens: 2500,
+      response_format: { type: "json_object" }
+    });
+
+    const responseText = completion.choices[0]?.message?.content || '';
+    console.log('OpenAI Mermaid succeeded');
+    return parseMermaidResponse(responseText);
+  } catch (openaiError) {
+    console.log('OpenAI failed:', openaiError);
+  }
+
+  // Fallback to Groq
+  try {
+    console.log('Trying Groq fallback for Mermaid...');
+    const groqMessages = [
+      { role: 'system' as const, content: MERMAID_SYSTEM_PROMPT + '\n\nIMPORTANT: Respond with ONLY valid JSON, no markdown wrapping.' },
+      { role: 'system' as const, content: contextMessage },
+      ...conversationHistory.slice(-4).map(m => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content
+      })),
+      { role: 'user' as const, content: userMessage }
+    ];
+
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: groqMessages,
+      temperature: 0.7,
+      max_tokens: 2500
+    });
+
+    let responseText = completion.choices[0]?.message?.content || '';
+    responseText = responseText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    console.log('Groq Mermaid succeeded');
+    return parseMermaidResponse(responseText);
+  } catch (groqError) {
+    console.log('Groq also failed:', groqError);
+    throw new Error('Both OpenAI and Groq failed. Please check your API keys.');
+  }
+}
+
+function parseMermaidResponse(responseText: string): MermaidResponse {
+  try {
+    const parsed = JSON.parse(responseText);
+    
+    if (parsed.topic && parsed.isNewTopic) {
+      currentTopic = parsed.topic;
+    }
+    
+    // Clean up mermaid code
+    let mermaidCode = parsed.mermaidCode || '';
+    mermaidCode = mermaidCode.replace(/\\n/g, '\n');
+    
+    // Sanitize mermaid code to fix common issues
+    mermaidCode = sanitizeMermaidCode(mermaidCode);
+    
+    return {
+      topic: parsed.topic || 'Concept',
+      isNewTopic: parsed.isNewTopic ?? true,
+      explanation: parsed.explanation || 'No explanation provided.',
+      mermaidCode
+    };
+  } catch {
+    return {
+      topic: 'Response',
+      isNewTopic: true,
+      explanation: responseText,
+      mermaidCode: ''
+    };
+  }
+}
+
+// Sanitize mermaid code to fix common syntax errors
+function sanitizeMermaidCode(code: string): string {
+  // Remove invisible edges (~~~) which often cause errors
+  code = code.replace(/\s*~~~\s*/g, '\n    ');
+  
+  // Fix unquoted special characters in node text
+  // Match node definitions like A[text] and quote if needed
+  code = code.replace(/(\w+)\[([^\]"]+)\]/g, (match, id, text) => {
+    // If text contains special chars, wrap in quotes
+    if (/[()^<>|&#]/.test(text)) {
+      // Replace ^ with unicode superscript
+      text = text.replace(/\^2/g, '²').replace(/\^3/g, '³').replace(/\^n/g, 'ⁿ');
+      return `${id}["${text}"]`;
+    }
+    return match;
+  });
+  
+  // Fix subgraph names that might have issues
+  code = code.replace(/subgraph\s+([^\["\n]+)\n/g, (match, name) => {
+    const trimmed = name.trim();
+    if (/[()^<>|&#\s]/.test(trimmed) && !trimmed.startsWith('"')) {
+      return `subgraph "${trimmed}"\n`;
+    }
+    return match;
+  });
+  
+  return code;
+}
+
 export function isAPIKeyConfigured(): boolean {
   return !!(import.meta.env.VITE_OPENAI_API_KEY || import.meta.env.VITE_GROQ_API_KEY);
 }

@@ -1,7 +1,7 @@
 // Step Sync Controller - coordinates speech with drawing step by step
 // This ensures narration and drawing happen together without lag
 
-import { elevenLabsService } from './elevenLabsService';
+import { speechService } from './speechService';
 import { drawingController } from './drawingController';
 import type { TeachingStep } from './preGeneratedTopics';
 import type { DrawCommand } from '../types';
@@ -44,7 +44,7 @@ class StepSyncController {
 
     // Calculate timing based on word count
     const wordCount = narration.split(' ').length;
-    // ElevenLabs speaks ~150 words/min = 400ms per word
+    // Web Speech speaks ~150 words/min = 400ms per word
     const estimatedSpeechMs = Math.max(wordCount * 400, 2000);
     const delayPerCommand = drawCommands.length > 0 
       ? Math.floor(estimatedSpeechMs / (drawCommands.length + 1))
@@ -56,7 +56,7 @@ class StepSyncController {
     // Start speech with slight delay so drawing begins first
     await this.delay(200);
     const speechPromise = narration 
-      ? elevenLabsService.speak(narration) 
+      ? speechService.speak(narration) 
       : Promise.resolve();
 
     // Wait for both to complete
@@ -92,7 +92,7 @@ class StepSyncController {
       // No drawing, just speak
       if (narration) {
         onSpeechStart?.();
-        await elevenLabsService.speak(narration);
+        await speechService.speak(narration);
       }
     } else {
       // Group commands into chunks for better sync
@@ -146,7 +146,7 @@ class StepSyncController {
   // Stop execution
   stop(): void {
     this.shouldStop = true;
-    elevenLabsService.stop();
+    speechService.stopSpeaking();
     this.isRunning = false;
   }
 

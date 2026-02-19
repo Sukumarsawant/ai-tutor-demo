@@ -1,18 +1,20 @@
 import { useState, useRef, useEffect } from 'react';
 import type { Message, TutorState } from '../types';
-import { getAIResponse, isAPIKeyConfigured, resetTopicContext } from '../services/aiService';
+import { getAIResponse, getMermaidResponse, isAPIKeyConfigured, resetTopicContext } from '../services/aiService';
 import { speechService } from '../services/speechService';
-import { elevenLabsService } from '../services/elevenLabsService';
 import { drawingController } from '../services/drawingController';
 import { stepSyncController } from '../services/stepSyncController';
 import { findPreGeneratedTopic, getQuickPrompts } from '../services/preGeneratedTopics';
+import type { ViewMode } from '../App';
 
 interface ChatProps {
   tutorState: TutorState;
   setTutorState: React.Dispatch<React.SetStateAction<TutorState>>;
+  viewMode: ViewMode;
+  onDiagramGenerated: (code: string) => void;
 }
 
-export function Chat({ tutorState, setTutorState }: ChatProps) {
+export function Chat({ tutorState, setTutorState, viewMode, onDiagramGenerated }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -53,54 +55,13 @@ export function Chat({ tutorState, setTutorState }: ChatProps) {
     setCurrentStep(-1);
 
     try {
-      // Check for pre-generated topic first (instant response)
-      const preGenerated = findPreGeneratedTopic(messageText);
-      
-      if (preGenerated) {
-        // Use pre-generated content with step-by-step sync
-        drawingController.clearCanvas();
-        
-        setTaskBreakdown(preGenerated.taskBreakdown);
-
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: preGenerated.explanation,
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, assistantMessage]);
-        setConversationHistory(prev => [
-          ...prev,
-          { role: 'user', content: messageText },
-          { role: 'assistant', content: preGenerated.explanation },
-        ]);
-
-        setTutorState({ isProcessing: false, isSpeaking: true, isListening: false });
-
-        // Execute with step-by-step sync
-        await stepSyncController.executeSteps(
-          preGenerated.steps,
-          (stepIndex) => setCurrentStep(stepIndex),
-          () => {
-            setTutorState(prev => ({ ...prev, isSpeaking: false }));
-            setCurrentStep(-1);
-          }
-        );
-      } else {
-        // Use AI API for non-pre-generated queries
+      // DIAGRAM MODE - Generate Mermaid diagram (no stepwise, output whole diagram)
+      if (viewMode === 'diagram') {
         if (!isAPIKeyConfigured()) {
           throw new Error('API key not configured');
         }
 
-        const response = await getAIResponse(messageText, conversationHistory);
-
-        if (response.taskBreakdown && response.taskBreakdown.length > 0) {
-          setTaskBreakdown(response.taskBreakdown);
-        }
-
-        if (response.isNewTopic) {
-          drawingController.clearCanvas();
-        }
+        const response = await getMermaidResponse(messageText, conversationHistory);
 
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
@@ -116,15 +77,90 @@ export function Chat({ tutorState, setTutorState }: ChatProps) {
           { role: 'assistant', content: response.explanation },
         ]);
 
-        setTutorState({ isProcessing: false, isSpeaking: true, isListening: false });
+        // Send diagram to parent - whole diagram at once
+        onDiagramGenerated(response.mermaidCode);
 
-        // Execute with improved sync
-        await stepSyncController.executeAIResponse(
-          response.narration,
-          response.drawCommands,
-          () => {},
-          () => setTutorState(prev => ({ ...prev, isSpeaking: false }))
-        );
+        // Speak the explanation
+        setTutorState({ isProcessing: false, isSpeaking: true, isListening: false });
+        await speechService.speak(response.explanation, () => {
+          setTutorState(prev => ({ ...prev, isSpeaking: false }));
+        });
+      }
+      // CANVAS MODE - Real-time drawing
+      else {
+        // Check for pre-generated topic first (instant response)
+        const preGenerated = findPreGeneratedTopic(messageText);
+        
+        if (preGenerated) {
+          // Use pre-generated content with step-by-step sync
+          drawingController.clearCanvas();
+          
+          setTaskBreakdown(preGenerated.taskBreakdown);
+
+          const assistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: preGenerated.explanation,
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, assistantMessage]);
+          setConversationHistory(prev => [
+            ...prev,
+            { role: 'user', content: messageText },
+            { role: 'assistant', content: preGenerated.explanation },
+          ]);
+
+          setTutorState({ isProcessing: false, isSpeaking: true, isListening: false });
+
+          // Execute with step-by-step sync
+          await stepSyncController.executeSteps(
+            preGenerated.steps,
+            (stepIndex) => setCurrentStep(stepIndex),
+            () => {
+              setTutorState(prev => ({ ...prev, isSpeaking: false }));
+              setCurrentStep(-1);
+            }
+          );
+        } else {
+          // Use AI API for non-pre-generated queries
+          if (!isAPIKeyConfigured()) {
+            throw new Error('API key not configured');
+          }
+
+          const response = await getAIResponse(messageText, conversationHistory);
+
+          if (response.taskBreakdown && response.taskBreakdown.length > 0) {
+            setTaskBreakdown(response.taskBreakdown);
+          }
+
+          if (response.isNewTopic) {
+            drawingController.clearCanvas();
+          }
+
+          const assistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: response.explanation,
+            timestamp: new Date(),
+          };
+
+          setMessages(prev => [...prev, assistantMessage]);
+          setConversationHistory(prev => [
+            ...prev,
+            { role: 'user', content: messageText },
+            { role: 'assistant', content: response.explanation },
+          ]);
+
+          setTutorState({ isProcessing: false, isSpeaking: true, isListening: false });
+
+          // Execute with improved sync
+          await stepSyncController.executeAIResponse(
+            response.narration,
+            response.drawCommands,
+            () => {},
+            () => setTutorState(prev => ({ ...prev, isSpeaking: false }))
+          );
+        }
       }
     } catch (error) {
       console.error('Error:', error);
@@ -164,14 +200,18 @@ export function Chat({ tutorState, setTutorState }: ChatProps) {
 
   const handleStop = () => {
     stepSyncController.stop();
-    elevenLabsService.stop();
+    speechService.stopSpeaking();
     speechService.stopListening();
     setTutorState({ isProcessing: false, isSpeaking: false, isListening: false });
     setCurrentStep(-1);
   };
 
   const handleClearCanvas = () => {
-    drawingController.clearCanvas();
+    if (viewMode === 'canvas') {
+      drawingController.clearCanvas();
+    } else {
+      onDiagramGenerated('');
+    }
     resetTopicContext();
     setTaskBreakdown([]);
     setCurrentStep(-1);
